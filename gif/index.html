@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gif制作</title>
+    <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+    <style>
+        body {
+            display: flex;
+        }
+
+        .item {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#File").change(function (file) {
+                var url = window.URL.createObjectURL(file.target.files[0])
+                $("#video")[0].src = url
+                $("#video")[0].onload = function () {
+                    window.URL.revokeObjectURL(src)
+                }
+            })
+            // 跨域问题
+            // $("#loadVideo").click(() => {
+            //     var url = $("#videoUrl").val()
+            //     console.log(url)
+            //     $("#video")[0].src = url
+            // })
+        })
+    </script>
+    <div class="item">
+        <h2>video</h2>
+        选择本地视频：
+        <input id="File" type="file" />
+        <br>
+        <!-- 加载在线视频：
+        <input id="videoUrl" type="text" />
+        <button id="loadVideo">加载</button> -->
+        <video id="video" controls width="512" height="288"></video>
+        <div>
+            开始录制gif：
+            <button onclick="onStart(this)">开始</button>
+            <button disabled onclick="onStop(this)">结束</button>
+            <label id="sec"></label>
+        </div>
+    </div>
+    <div class="item">
+        <h2>gif [点击图片下载]</h2>
+        <a><img src="" id="gifEl" /></a>
+        <canvas id="cvs" style="display: none;"></canvas>
+    </div>
+</body>
+<script src="./js/gif.js"></script>
+<script src="./js/gif.worker.js"></script>
+<script>
+    const cvs = document.getElementById('cvs')
+    const ctx = cvs.getContext('2d')
+    const video = document.getElementById('video')
+    const gifEl = document.getElementById('gifEl')
+    const sec = document.getElementById('sec')
+    cvs.width = video.width
+    cvs.height = video.height
+    const gif = new GIF({
+        workers: 20,
+        quality: 1
+    });
+    let isRender = false
+    const render = () => {
+        if (ctx) {
+            ctx.clearRect(0, 0, cvs.width, cvs.height)
+            ctx.drawImage(video, 0, 0, cvs.width, cvs.height)
+        }
+        if (isRender) {
+            sec.innerHTML = parseInt(sec.innerHTML) + 1 + '帧'
+            const img = document.createElement('img')
+            img.src = cvs.toDataURL('image/png')
+            console.log(img.src);
+            img.onload = () => {
+                gif.addFrame(img, {
+                    delay: 100
+                })
+            }
+        }
+        setTimeout(render, 100)
+    }
+    render()
+    const onStart = (me) => {
+        sec.innerHTML = '0帧'
+        video.play()
+        isRender = true
+        me.setAttribute('disabled', 'disabled')
+        me.nextElementSibling.removeAttribute('disabled')
+    }
+    const onStop = (me) => {
+        me.setAttribute('disabled', 'disabled')
+        me.previousElementSibling.removeAttribute('disabled')
+        video.pause()
+        isRender = false
+        gif.on('finished', function (blob) {
+            gifEl.src = URL.createObjectURL(blob)
+            gifEl.parentElement.setAttribute('download', 'my.gif')
+            gifEl.parentElement.href = gifEl.src
+        });
+        gif.render();
+    }
+</script>
+
+</html>
